@@ -53,6 +53,7 @@ func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Error in reading request", err)
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	log.Println("READ THE REQUEST")
