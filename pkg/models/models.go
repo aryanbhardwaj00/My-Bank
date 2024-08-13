@@ -10,5 +10,10 @@ type Customer struct {
 	UID           uuid.UUID
 	Name          string
 	Age           int
-	AccountNumber int
+	Account       Account
+}
+
+type Account struct {
+	AccountNumber  int
+	CurrentBalance float32
 }
