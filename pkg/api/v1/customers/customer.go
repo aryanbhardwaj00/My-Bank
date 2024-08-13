@@ -79,7 +79,7 @@ func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 }
 
 func SearchCustomer(w http.ResponseWriter, r *http.Request) {
-	// Read the request , reeturn error if fails
+	// Read the request , return error if fails
 	// Call the SearchCustomer function
 	// Return if the requested field not found
 	// If found , send it as response
