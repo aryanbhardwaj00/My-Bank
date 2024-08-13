@@ -28,7 +28,7 @@ func main() {
 	log.Println("Binding path with Function")
 	newRouter.HandleFunc("/api/v1/customers", customerv1handler.CreateCustomer).Methods("POST")
 	newRouter.HandleFunc("/api/v1/customers/{id}", customerv1handler.SearchCustomer).Methods("GET")
-	newRouter.HandleFunc("/api/v1/customers/{id}", customerv1handler.DeleteCustomer).Methods("DELETE")
+	newRouter.HandleFunc("/api/v1/customers/{abc}", customerv1handler.DeleteCustomer).Methods("DELETE")
 	newRouter.HandleFunc("/api/v1/customers/{id}", customerv1handler.UpdateCustomer).Methods("PATCH")
 
 	log.Println("Starting the Server")
