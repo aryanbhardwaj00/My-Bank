@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strconv"
 
 	"github.com/Bank/pkg/models"
 	"github.com/Bank/pkg/utils"
@@ -15,9 +16,9 @@ type customer struct {
 
 type Customer interface {
 	InsertIntoDB(models.Customer) error
-	UpdateCustomer(input string, cust models.Customer) error
+	UpdateCustomer(input string, cust models.Customer) (models.Customer, error)
 	DeleteCustomer(models.Customer) error
-	SearchCustomer(string) (int, error)
+	SearchCustomer(string) (models.Customer, error)
 }
 
 func NewCustomer() Customer {
@@ -25,9 +26,8 @@ func NewCustomer() Customer {
 }
 
 func (c *customer) InsertIntoDB(input models.Customer) error {
-	log.Println("inside db customer insert")
-	// Insert Record into DB
 	_, err := utils.Connection.NewInsert().Model(&input).Exec(context.Background())
+
 	if err != nil {
 		log.Println("Error in inserting data", err)
 		return err
@@ -38,11 +38,12 @@ func (c *customer) InsertIntoDB(input models.Customer) error {
 func (c *customer) DeleteCustomer(input models.Customer) error {
 
 	res, err := utils.Connection.NewDelete().Model((&input)).Where("Name=?", input.Name).Exec(context.Background())
+
 	if err != nil {
 		log.Println("Error in deleting field", err)
 		return err
 	}
-	log.Println("rows affected", res)
+
 	result, err := res.RowsAffected()
 	if result == 0 || err != nil {
 		log.Println("No such record found", err)
@@ -52,32 +53,32 @@ func (c *customer) DeleteCustomer(input models.Customer) error {
 	return nil
 }
 
-func (c *customer) SearchCustomer(input string) (int, error) {
+func (c *customer) SearchCustomer(input string) (models.Customer, error) {
 
-	var cust models.Customer
-	_, err := utils.Connection.NewSelect().Model(&cust).Where("Name=?", input).Exec(context.Background(), &cust)
+	var cst models.Customer
+
+	err := utils.Connection.NewSelect().Model(&cst).Where("name=?", input).Scan(context.Background())
 	if err != nil {
 		log.Println("Error in searching field", err)
-		return cust.AccountNumber, err
+		return cst, err
 	}
 
-	return cust.AccountNumber, nil
+	return cst, nil
 }
 
-func (c *customer) UpdateCustomer(input string, cust models.Customer) error {
-	log.Println("inside db customer update", input, cust)
+func (c *customer) UpdateCustomer(name string, cust models.Customer) (models.Customer, error) {
+	result, err := utils.Connection.NewUpdate().Model(&cust).SetColumn("age", strconv.Itoa(cust.Age)).Where("name=?", name).Exec(context.Background())
 
-	result, err := utils.Connection.NewUpdate().Model(&cust).Where("Name=?", input).Exec(context.Background())
 	if err != nil {
 		log.Println("Error in updating data", err)
-		return err
+		return models.Customer{}, err
 	}
+
 	rowsAffected, err := result.RowsAffected()
 	if rowsAffected == 0 || err != nil {
 		log.Println("No such record found", err)
-		return errors.New("No record")
+		return cust, errors.New("No record")
 	}
-	log.Println(result)
 
-	return nil
+	return cust, nil
 }
