@@ -17,8 +17,9 @@ func CreateCustomer(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&cust)
 	log.Println(cust)
+
 	// json.Decoder , decodes/ reads from request body(r.body) and
-	// Decode(&cust) will store whatever was read from request body and store it in cust variable
+	// Decode(&cust) will store whatever was read from request body and store it in "cust" variable
 
 	if err != nil {
 		log.Println("Error in reading from request", err)
@@ -26,7 +27,10 @@ func CreateCustomer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Creating an Instance of Customer Interface, so that we can use its underlying methods
 	c := db.NewCustomer()
+
+	// Insert into Database and catch error(if any)
 	err = c.InsertIntoDB(cust)
 	if err != nil {
 		log.Println("Database insert failed", err)
@@ -97,30 +101,45 @@ func SearchCustomer(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	response := "Account Number:"
-	w.Write([]byte(response))
 	w.Write(a)
 }
 
 func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
-	var cust models.Customer
 
+	var cust models.Customer
 	err := json.NewDecoder(r.Body).Decode(&cust)
 	if err != nil {
 		log.Println("Error in reading request", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	log.Println(cust)
 	m := mux.Vars(r)
+	log.Println("Map of Path parameter:", m)
+
 	c := db.NewCustomer()
-	err = c.UpdateCustomer(m["id"], cust)
+	updtCust, err := c.UpdateCustomer(m["id"], cust)
+
 	if err != nil {
-		log.Println("Error in Updating data", err)
+		log.Println("Error in Updating", err)
+		w.WriteHeader(http.StatusBadRequest)
 		response := "Failed to updated the requested field"
 		w.Write([]byte(response))
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	response := "Updated the requested field"
-	w.Write([]byte(response))
+
+	log.Println("4")
+
+	response, err := json.Marshal(updtCust)
+	if err != nil {
+		log.Println("Failed to send data", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("5")
+
+	responseMessage := "Updated the requested field:"
+	w.Write([]byte(responseMessage))
+	w.Write(response)
 }
