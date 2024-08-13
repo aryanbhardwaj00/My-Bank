@@ -38,19 +38,21 @@ func CreateCustomer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a, err := json.Marshal(cust)
+	// Send back data
+	respond, err := json.Marshal(cust)
 	if err != nil {
 		log.Println("Unable to read", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	response := "Created new field"
 	w.Write([]byte(response))
-	w.Write(a)
+	w.Write(respond)
 }
 
 func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
-	log.Println("INSIDE DELETE CUSTOMER IN HANDLER")
+	// Read the coming request
 
 	var customer1 models.Customer
 	err := json.NewDecoder(r.Body).Decode(&customer1)
@@ -59,8 +61,6 @@ func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
-	log.Println("READ THE REQUEST")
 
 	c := db.NewCustomer()
 	err = c.DeleteCustomer(customer1)
@@ -73,7 +73,9 @@ func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Println("Successfully deleted data")
 	}
+
 	log.Println("DELETED DATA")
+
 	Response := "Deleted the respective field"
 	w.Write([]byte(Response))
 }
@@ -83,6 +85,7 @@ func SearchCustomer(w http.ResponseWriter, r *http.Request) {
 	// Call the SearchCustomer function
 	// Return if the requested field not found
 	// If found , send it as response
+
 	m := mux.Vars(r)
 	log.Println("Map of path parameter", m)
 
@@ -95,13 +98,13 @@ func SearchCustomer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a, err := json.Marshal(result)
+	respond, err := json.Marshal(result)
 	if err != nil {
 		log.Println("Unable to send", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.Write(a)
+	w.Write(respond)
 }
 
 func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
@@ -128,16 +131,12 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("4")
-
 	response, err := json.Marshal(updtCust)
 	if err != nil {
 		log.Println("Failed to send data", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	log.Println("5")
 
 	responseMessage := "Updated the requested field:"
 	w.Write([]byte(responseMessage))
