@@ -22,3 +22,15 @@ type Customer struct {
 	ResourceVersion time.Time
 	Tags            []string
 }
+
+type Account struct {
+	bun.BaseModel `bun:"table:account,alias:acc"`
+	UID           uuid.UUID
+	Type          string
+	Balance       float32
+	Status        string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	CustomerID    int
+	Tags          []string
+}
