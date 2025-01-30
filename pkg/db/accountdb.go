@@ -17,6 +17,7 @@ type Account interface {
 	InsertAccountInDB(models.Account) error
 	DeleteAcountInDB(string) error
 	SearchAccountInDB(string) (models.Account, error)
+	UpdateAccount(string, models.Account) (models.Account, error)
 }
 
 func NewAccount() Account {
@@ -65,4 +66,14 @@ func (d *DB) SearchAccountInDB(input string) (models.Account, error) {
 	}
 
 	return acnt, nil
+}
+
+func (d *DB) UpdateAccount(input string, account models.Account) (models.Account, error) {
+	err := utils.Connection.NewUpdate().Model(&account).Where("uid=?", input).Scan(context.Background())
+	if err != nil {
+		log.Println("Error in updating record.", err)
+		return models.Account{}, err
+	}
+	log.Println("Succesfully updated record.")
+	return account, nil
 }

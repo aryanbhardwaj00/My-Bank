@@ -114,7 +114,7 @@ func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 	// Extract the path parameter[UID]
 	mapOfPathParameters := mux.Vars(r)
 	log.Println("Map of path parameter:", mapOfPathParameters)
-	
+
 	c := db.NewCustomer()
 
 	err := c.DeleteCustomerInDB(mapOfPathParameters["uid"])
@@ -176,7 +176,6 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 	// Make updates in fetched record by verifying non empty fields
 	// Pass the updated variable in update customer function and update the DB
 	log.Println("Inside Update Handler")
-	log.Println(r.Body)
 	var updtCust models.Customer
 	err := json.NewDecoder(r.Body).Decode(&updtCust)
 	if err != nil {
@@ -184,6 +183,7 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
 	searchingCriteria := mux.Vars(r)
 	log.Println("Map of path parameters:", searchingCriteria)
 	dbInterface := db.NewCustomer()
@@ -207,14 +207,19 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 
 	// Check fields which are not empty and make changes in record fetched earlier
 
-	if updtCust.Name != "" {
+	if updtCust.Name != oldCust.Name {
+		if updtCust.Name == "" {
+			log.Println("Empty name field.")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("Empty Name field."))
+			return
+		}
 		oldCust.Name = updtCust.Name
-		log.Println("updated name", oldCust)
 	}
 
-	if updtCust.Age != 0 {
-		if updtCust.Age < 0 {
-			log.Println("Negative value received for age")
+	if updtCust.Age != oldCust.Age {
+		if updtCust.Age <= 0 {
+			log.Println("Invalid value received for age")
 			w.WriteHeader(400)
 			w.Write([]byte("Invalid value for age."))
 			return
@@ -223,14 +228,14 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 		log.Println("updated age", oldCust)
 	}
 
-	if updtCust.Contact != 0 {
-		if len(strconv.Itoa(updtCust.Contact)) == 10 && updtCust.Contact >= 0 {
+	if updtCust.Contact != oldCust.Contact {
+		if len(strconv.Itoa(updtCust.Contact)) == 10 && updtCust.Contact > 0 {
 			oldCust.Contact = updtCust.Contact
 			log.Println("updated contact", oldCust)
 		} else {
 			log.Println("Invalid contact")
 			w.WriteHeader(400)
-			w.Write([]byte("Invalid value for contact."))
+			w.Write([]byte("Invalid value for Contact."))
 			return
 		}
 	}
@@ -241,7 +246,7 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 		return err == nil
 	}
 
-	if updtCust.PrimaryEmail != "" {
+	if updtCust.PrimaryEmail != oldCust.PrimaryEmail {
 		if isValidEmail(updtCust.PrimaryEmail) == true {
 			oldCust.PrimaryEmail = updtCust.PrimaryEmail
 			log.Println("updated primary email", oldCust)
@@ -253,8 +258,8 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if updtCust.SecondaryEmail != "" {
-		if isValidEmail(updtCust.PrimaryEmail) == true {
+	if updtCust.SecondaryEmail != oldCust.SecondaryEmail {
+		if isValidEmail(updtCust.SecondaryEmail) == true {
 			oldCust.SecondaryEmail = updtCust.SecondaryEmail
 			log.Println("updated secondary email", oldCust)
 		} else {
@@ -265,28 +270,34 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if updtCust.Status != "" {
+	if updtCust.Status != oldCust.Status {
+		if updtCust.Status == "" {
+			log.Println("Invalid status")
+			w.WriteHeader(400)
+			w.Write([]byte("Invalid Status."))
+			return
+		}
 		oldCust.Status = updtCust.Status
 		log.Println("updated status", oldCust)
 	}
 
-	if updtCust.AccountID != 0 {
-		if updtCust.AccountID > 0 {
-			oldCust.AccountID = updtCust.AccountID
-			log.Println("updated accid", oldCust)
-		} else {
-			log.Println("Invalid AccountId")
+	if updtCust.Address.City != oldCust.Address.City {
+		if updtCust.Address.City == "" {
+			log.Println("Invalid city")
 			w.WriteHeader(400)
-			w.Write([]byte("Invalid AccountID"))
+			w.Write([]byte("Invalid City."))
 			return
 		}
-	}
-
-	if updtCust.Address.City != "" {
 		oldCust.Address.City = updtCust.Address.City
 	}
 
-	if updtCust.Address.State != "" {
+	if updtCust.Address.State != oldCust.Address.State {
+		if updtCust.Address.State == "" {
+			log.Println("Invalid State")
+			w.WriteHeader(400)
+			w.Write([]byte("Invalid Sity."))
+			return
+		}
 		oldCust.Address.State = updtCust.Address.State
 	}
 
@@ -348,15 +359,21 @@ func SearchCustomers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// ageInInt, err := strconv.Atoi(age)
-	// if err != nil {
-	// 	log.Println("Error in converting age to int:", err)
-	// 	w.WriteHeader(http.StatusInternalServerError)
-	// 	return
-	// }
-	if age != "0" {
+	ageInInt, err := strconv.Atoi(age)
+	if err != nil {
+		log.Println("Error in converting age to int:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if ageInInt != 0 {
+		if ageInInt < 0 {
+			log.Println("Invalid Age")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("Invalid Age"))
+			return
+		}
 		log.Println("Verified age")
-		err := utils.Connection.NewSelect().Model(&customers).Where("age=?", age).Scan(context.Background())
+		err := utils.Connection.NewSelect().Model(&customers).Where("age=?", ageInInt).Scan(context.Background())
 		log.Println(err)
 		if err != nil {
 			log.Println("Error in searching requested fields", err)

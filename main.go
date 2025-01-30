@@ -35,8 +35,9 @@ func main() {
 
 	// Path for Account related requests
 	newRouter.HandleFunc("/api/v1/accounts", accountv1handler.CreateAccount).Methods("POST")
-	newRouter.HandleFunc("/api/v1/accounts/{acc_id}", accountv1handler.SearchAccount).Methods("GET")
-	newRouter.HandleFunc("/api/v1/accounts/{acc_id}", accountv1handler.DeleteAcount).Methods("DELETE")
+	newRouter.HandleFunc("/api/v1/accounts/{uid}", accountv1handler.SearchAccount).Methods("GET")
+	newRouter.HandleFunc("/api/v1/accounts/{uid}", accountv1handler.DeleteAcount).Methods("DELETE")
+	newRouter.HandleFunc("/api/v1/accounts/{uid}", accountv1handler.UpdateAccount).Methods("PATCH")
 
 	http.ListenAndServe(":8080", newRouter)
 }

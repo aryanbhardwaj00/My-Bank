@@ -9,20 +9,20 @@ import (
 
 type Customer struct {
 	bun.BaseModel   `bun:"table:customer,alias:c"`
-	UID             uuid.UUID         `json:"uid"`
-	Name            string            `json:"name"`
-	Age             int               `json:"age"`
-	Contact         int               `json:"contact"`
-	PrimaryEmail    string            `json:"primary_email"`
-	SecondaryEmail  string            `json:"secondary_email"`
-	CreatedAt       *time.Time        `json:"created_at"`
-	UpdatedAt       *time.Time        `json:"updated_at"`
-	Status          string            `json:"status"`
-	AccountID       int               `json:"accountid"`
-	Address         *Address           `json:"address"`
-	ResourceVersion int64             `json:"resourceversion"`
-	Tags            map[string]string `json:"tags"`
-	Labels          map[string]string `json:"label"`
+	UID             uuid.UUID         `json:"uid" bun:"uid"`
+	Name            string            `json:"name" bun:"name"`
+	Age             int               `json:"age" bun:"age"`
+	Contact         int               `json:"contact" bun:"contact"`
+	PrimaryEmail    string            `json:"primary_email" bun:"primary_email"`
+	SecondaryEmail  string            `json:"secondary_email" bun:"secondary_email"`
+	CreatedAt       *time.Time        `json:"created_at" bun:"created_at"`
+	UpdatedAt       *time.Time        `json:"updated_at" bun:"updated_at"`
+	Status          string            `json:"status" bun:"status"`
+	AccountID       int               `json:"accountid" bun:"account_id"`
+	Address         *Address          `json:"address" bun:"address"`
+	ResourceVersion int64             `json:"resourceversion" bun:"resource_version"`
+	Tags            map[string]string `json:"tags" bun:"tags"`
+	Labels          map[string]string `json:"label" bun:"labels"`
 }
 
 type Address struct {
@@ -32,12 +32,11 @@ type Address struct {
 
 type Account struct {
 	bun.BaseModel `bun:"table:accounts,alias:acc"`
-	UID           uuid.UUID `json:"uid"`
-	Type          string    `json:"type"`
-	Balance       float32   `json:"balance"`
-	Status        string    `json:"status"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
-	CustomerID    int       `json:"customer_id"`
-	Tags          []string  `json:"tags"`
+	CustomerID    uuid.UUID  `json:"customer_id"`
+	Type          string     `json:"type"`
+	Balance       float32    `json:"balance"`
+	Status        string     `json:"status"`
+	CreatedAt     *time.Time `json:"created_at"`
+	UpdatedAt     *time.Time `json:"updated_at"`
+	Tags          []string   `json:"tags"`
 }
