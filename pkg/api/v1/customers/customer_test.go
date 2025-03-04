@@ -3,6 +3,7 @@ package customerv1handler_test
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"testing"
 
@@ -17,23 +18,23 @@ type createTestcase struct {
 	name               string
 	inp                models.Customer
 	expectedStatusCode int
-	expectedError      error
+	expectedError      string
 }
 
 var createTest = []createTestcase{
 	{
 		name: "Valid input",
 		inp: models.Customer{
-			Name:           "Nishant",
+			Name:           "Ritesh",
 			Age:            22,
 			Contact:        9845647219,
-			PrimaryEmail:   "nishant@gmail.com",
-			SecondaryEmail: "nishant1@gmail.com",
+			PrimaryEmail:   "ritesh@gmail.com",
+			SecondaryEmail: "rishi1@gmail.com",
 			AccountID:      129,
 			Address:        &models.Address{City: "Jaipur", State: "Rajasthan"},
 		},
 		expectedStatusCode: http.StatusOK,
-		expectedError:      nil,
+		expectedError:      "Created new field.",
 	},
 	{
 		name: "Invalid Name",
@@ -47,7 +48,7 @@ var createTest = []createTestcase{
 			Address:        &models.Address{City: "Jaipur", State: "Rajasthan"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
+		expectedError:      customerrors.ErrInvalidInput.Error(),
 	},
 	{
 		name: "Empty Age field",
@@ -61,7 +62,7 @@ var createTest = []createTestcase{
 			Address:        &models.Address{City: "Jaipur", State: "Rajasthan"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
+		expectedError:      apperrors.ErrInvalidInput.Error(),
 	},
 	{
 		name: "Invalid Age",
@@ -75,7 +76,7 @@ var createTest = []createTestcase{
 			Address:        &models.Address{City: "Jaipur", State: "Rajasthan"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
+		expectedError:      apperrors.ErrInvalidInput.Error(),
 	},
 	{
 		name: "Empty Contact",
@@ -89,10 +90,10 @@ var createTest = []createTestcase{
 			Address:        &models.Address{City: "Jaipur", State: "Rajasthan"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
+		expectedError:      apperrors.ErrInvalidInput.Error(),
 	},
 	{
-		name: "Invalid Contact-Less than ten digits",
+		name: "Invalid Contact->Less than ten digits",
 		inp: models.Customer{
 			Name:           "Nishant",
 			Age:            22,
@@ -103,7 +104,7 @@ var createTest = []createTestcase{
 			Address:        &models.Address{City: "Jaipur", State: "Rajasthan"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
+		expectedError:      apperrors.ErrInvalidInput.Error(),
 	},
 	{
 		name: "Negative value for Contact",
@@ -117,7 +118,7 @@ var createTest = []createTestcase{
 			Address:        &models.Address{City: "Jaipur", State: "Rajasthan"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
+		expectedError:      apperrors.ErrInvalidInput.Error(),
 	},
 	{
 		name: "Invalid Primary email",
@@ -131,7 +132,7 @@ var createTest = []createTestcase{
 			Address:        &models.Address{City: "Jaipur", State: "Rajasthan"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
+		expectedError:      apperrors.ErrInvalidInput.Error(),
 	},
 	{
 		name: "Invalid Secondary email",
@@ -145,36 +146,9 @@ var createTest = []createTestcase{
 			Address:        &models.Address{City: "Jaipur", State: "Rajasthan"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
+		expectedError:      apperrors.ErrInvalidInput.Error(),
 	},
-	{
-		name: "Empty AccountID",
-		inp: models.Customer{
-			Name:           "Nishant",
-			Age:            23,
-			Contact:        1234567891,
-			PrimaryEmail:   "nishant@gmail.com",
-			SecondaryEmail: "nishant1@gmail.com",
-			AccountID:      0,
-			Address:        &models.Address{City: "Jaipur", State: "Rajasthan"},
-		},
-		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
-	},
-	{
-		name: "Negative AccountID",
-		inp: models.Customer{
-			Name:           "Nishant",
-			Age:            23,
-			Contact:        1234567891,
-			PrimaryEmail:   "nishant@gmail.com",
-			SecondaryEmail: "nishant1@gmail.com",
-			AccountID:      -123,
-			Address:        &models.Address{City: "Jaipur", State: "Rajasthan"},
-		},
-		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
-	},
+
 	{
 		name: "Empty Address field",
 		inp: models.Customer{
@@ -187,7 +161,7 @@ var createTest = []createTestcase{
 			Address:        &models.Address{},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
+		expectedError:      apperrors.ErrInvalidInput.Error(),
 	},
 	{
 		name: "No City in Address",
@@ -201,7 +175,7 @@ var createTest = []createTestcase{
 			Address:        &models.Address{State: "Rajasthan"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
+		expectedError:      apperrors.ErrInvalidInput.Error(),
 	},
 	{
 		name: "No State in Address",
@@ -215,7 +189,7 @@ var createTest = []createTestcase{
 			Address:        &models.Address{City: "Jaipur"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      apperrors.ErrInvalidInput,
+		expectedError:      apperrors.ErrInvalidInput.Error(),
 	},
 }
 
@@ -228,7 +202,7 @@ func TestCreateCustomer(t *testing.T) {
 				t.Fatalf("Error during marshalling:%v", err)
 			}
 			// Create a request
-			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/customers", bytes.NewBuffer(reqBody))
+			req, err := http.NewRequest("POST", "http://localhost:8080/api/v1/customer", bytes.NewBuffer(reqBody))
 			assert.NoError(t, err)
 
 			// Create a client and make a request
@@ -237,53 +211,16 @@ func TestCreateCustomer(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error during HTTP request: %v ", err)
 			}
+			errorMsg, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("Error during HTTP response reading: %v ", err)
+			}
 			// Ensure the response body is closed after reading
 			defer res.Body.Close()
 
 			// Assert Status Codes
 			assert.Equal(t, tt.expectedStatusCode, res.StatusCode)
-		})
-	}
-}
-
-type srchTestcase struct {
-	name               string
-	inp                uuid.UUID
-	expectedStatusCode int
-	expectedError      error
-}
-
-var searchTest = []srchTestcase{
-	{
-		name:               "With Valid Inputs",
-		inp:                uuid.MustParse("33343231-3837-6566-2d64-6234642d3436"),
-		expectedStatusCode: http.StatusOK,
-		expectedError:      nil,
-	},
-	{
-		name:               "With non existing element",
-		inp:                uuid.MustParse("33343231-3837-6566-2d64-6234642d3437"),
-		expectedStatusCode: http.StatusNotFound,
-		expectedError:      apperrors.ErrNotFound,
-	},
-}
-
-func TestSearchCustomer(t *testing.T) {
-	for _, tt := range searchTest {
-		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest("GET", "http://localhost:8080/api/v1/customers/"+tt.inp.String(), nil)
-			assert.NoError(t, err)
-
-			client := http.Client{}
-			res, err := client.Do(req)
-			if err != nil {
-				t.Fatalf("Error during HTTP request: %v", err)
-			}
-			defer res.Body.Close()
-
-			// Assert status code
-			assert.Equal(t, tt.expectedStatusCode, res.StatusCode)
-
+			assert.Contains(t, string(errorMsg), tt.expectedError)
 		})
 	}
 }
@@ -292,21 +229,21 @@ type dltTestcase struct {
 	name               string
 	inp                uuid.UUID
 	expectedStatusCode int
-	expectedError      error
+	expectedError      string
 }
 
 var deleteTest = []dltTestcase{
 	{
 		name:               "With Valid Inputs",
-		inp:                uuid.MustParse("33343231-3837-6566-2d64-6234642d3436"),
+		inp:                uuid.MustParse("33343231-3837-6566-2d64-6234642d3436"), // Already Deleted
 		expectedStatusCode: http.StatusOK,
-		expectedError:      nil,
+		expectedError:      "Deleted the requested field.",
 	},
 	{
 		name:               "With non existing element",
 		inp:                uuid.MustParse("30396165-6263-3965-2d34-3338322d3436"),
 		expectedStatusCode: http.StatusNotFound,
-		expectedError:      apperrors.ErrNotFound,
+		expectedError:      apperrors.ErrNotFound.Error(),
 	},
 }
 
@@ -321,12 +258,16 @@ func TestDel(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error during HTTP request: %v", err)
 			}
+			errorMsg, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("Error during HTTP response reading: %v ", err)
+			}
 			// Ensure the response body is closed after reading
 			defer res.Body.Close()
 
 			// Assert status code
 			assert.Equal(t, tt.expectedStatusCode, res.StatusCode)
-
+			assert.Contains(t, string(errorMsg), tt.expectedError)
 		})
 	}
 }
@@ -336,7 +277,7 @@ type updtTestCase struct {
 	inp                uuid.UUID
 	inpBody            models.Customer
 	expectedStatusCode int
-	expectedError      error
+	expectedError      string
 }
 
 var updtTest = []updtTestCase{
@@ -354,7 +295,7 @@ var updtTest = []updtTestCase{
 			Address:        &models.Address{City: "Hisar", State: "Haryana"},
 		},
 		expectedStatusCode: http.StatusOK,
-		expectedError:      nil,
+		expectedError:      "",
 	},
 
 	{
@@ -371,7 +312,7 @@ var updtTest = []updtTestCase{
 			Address:        &models.Address{City: "Hisar", State: "Haryana"},
 		},
 		expectedStatusCode: http.StatusNotFound,
-		expectedError:      customerrors.ErrNotFound,
+		expectedError:      customerrors.ErrNotFound.Error(),
 	},
 
 	{
@@ -388,7 +329,7 @@ var updtTest = []updtTestCase{
 			Address:        &models.Address{City: "Hisar", State: "Haryana"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      customerrors.ErrInvalidInput,
+		expectedError:      customerrors.ErrInvalidInput.Error(),
 	},
 	{
 		name: "Update Age with No input",
@@ -404,7 +345,7 @@ var updtTest = []updtTestCase{
 			Address:        &models.Address{City: "Hisar", State: "Haryana"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      customerrors.ErrInvalidInput,
+		expectedError:      customerrors.ErrInvalidInput.Error(),
 	},
 
 	{
@@ -421,7 +362,7 @@ var updtTest = []updtTestCase{
 			Address:        &models.Address{City: "Hisar", State: "Haryana"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      customerrors.ErrInvalidInput,
+		expectedError:      customerrors.ErrInvalidInput.Error(),
 	},
 
 	{
@@ -438,7 +379,7 @@ var updtTest = []updtTestCase{
 			Address:        &models.Address{City: "Hisar", State: "Haryana"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      customerrors.ErrInvalidInput,
+		expectedError:      customerrors.ErrInvalidInput.Error(),
 	},
 
 	{
@@ -455,7 +396,7 @@ var updtTest = []updtTestCase{
 			Address:        &models.Address{City: "Hisar", State: "Haryana"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      customerrors.ErrInvalidInput,
+		expectedError:      customerrors.ErrInvalidInput.Error(),
 	},
 
 	{
@@ -472,7 +413,7 @@ var updtTest = []updtTestCase{
 			Address:        &models.Address{City: "Hisar", State: "Haryana"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      customerrors.ErrInvalidInput,
+		expectedError:      customerrors.ErrInvalidInput.Error(),
 	},
 
 	{
@@ -489,7 +430,7 @@ var updtTest = []updtTestCase{
 			Address:        &models.Address{City: "Hisar", State: "Haryana"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      customerrors.ErrInvalidInput,
+		expectedError:      customerrors.ErrInvalidInput.Error(),
 	},
 
 	{
@@ -505,7 +446,7 @@ var updtTest = []updtTestCase{
 			Address:        &models.Address{City: "", State: "Haryana"},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      customerrors.ErrInvalidInput,
+		expectedError:      customerrors.ErrInvalidInput.Error(),
 	},
 
 	{
@@ -521,7 +462,7 @@ var updtTest = []updtTestCase{
 			Address:        &models.Address{City: "Hisar", State: ""},
 		},
 		expectedStatusCode: http.StatusBadRequest,
-		expectedError:      customerrors.ErrInvalidInput,
+		expectedError:      customerrors.ErrInvalidInput.Error(),
 	},
 }
 
@@ -541,9 +482,14 @@ func TestUpdate(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error during HTTP request: %v", err)
 			}
+			errorMsg, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("Error during HTTP response reading: %v ", err)
+			}
 			defer res.Body.Close()
 
 			assert.Equal(t, tt.expectedStatusCode, res.StatusCode)
+			assert.Contains(t, string(errorMsg), tt.expectedError)
 		})
 	}
 }

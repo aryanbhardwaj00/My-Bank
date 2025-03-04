@@ -27,11 +27,11 @@ func main() {
 	// Here we are binding the path of incoming request to the function
 	// HandleFunc takes two arguments , Path and the Function
 
-	newRouter.HandleFunc("/api/v1/customers", customerv1handler.CreateCustomer).Methods("POST")
+	newRouter.HandleFunc("/api/v1/customer", customerv1handler.CreateCustomer).Methods("POST")
 	newRouter.HandleFunc("/api/v1/customers/{uid}", customerv1handler.GetCustomer).Methods("GET")
 	newRouter.HandleFunc("/api/v1/customers/{uid}", customerv1handler.DeleteCustomer).Methods("DELETE")
 	newRouter.HandleFunc("/api/v1/customers/{uid}", customerv1handler.UpdateCustomer).Methods("PATCH")
-	newRouter.HandleFunc("/api/v1/customers", customerv1handler.SearchCustomers).Methods("GET")
+	newRouter.HandleFunc("/api/v1/customers", customerv1handler.ListCustomer).Methods("POST")
 
 	// Path for Account related requests
 	newRouter.HandleFunc("/api/v1/accounts", accountv1handler.CreateAccount).Methods("POST")

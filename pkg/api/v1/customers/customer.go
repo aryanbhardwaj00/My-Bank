@@ -1,26 +1,25 @@
 package customerv1handler
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/mail"
 	"strconv"
+	"strings"
 
 	"github.com/Bank/pkg/customerrors"
 	"github.com/Bank/pkg/db"
 	"github.com/Bank/pkg/models"
-	"github.com/Bank/pkg/utils"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
 func CreateCustomer(w http.ResponseWriter, r *http.Request) {
 	var cust models.Customer
-
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&cust)
 	// json.Decoder , decodes/ reads from request body(r.body) and
@@ -28,7 +27,7 @@ func CreateCustomer(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println("Error in reading from request", err)
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -39,22 +38,19 @@ func CreateCustomer(w http.ResponseWriter, r *http.Request) {
 	// Check if the essential fields are empty or not
 	if cust.Name == "" {
 		log.Println("Empty Name")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Empty name field."))
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if cust.Age <= 0 {
-		log.Println("Invalid value received for age")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Empty or invalid value for age."))
+		log.Println("Invalid Age")
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if cust.Contact == 0 || len(strconv.Itoa(cust.Contact)) != 10 {
 		log.Println("Invalid contact number")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Empty or invalid contact."))
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -65,31 +61,21 @@ func CreateCustomer(w http.ResponseWriter, r *http.Request) {
 
 	if isValidEmail(cust.PrimaryEmail) == false {
 		log.Println("Invalid Primary Email")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Empty or invalid email address."))
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if cust.SecondaryEmail != "" {
 		if isValidEmail(cust.SecondaryEmail) == false {
 			log.Println("Invalid Secondary Email")
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Empty or invalid email address."))
+			http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 			return
 		}
 	}
 
-	if cust.AccountID <= 0 {
-		log.Println("Invalid value received for Acc_Id")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Invalid value for ACCOUNT ID."))
-		return
-	}
-
 	if cust.Address.City == "" || cust.Address.State == "" {
 		log.Println("Empty Address")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Empty ADDRESS field."))
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 		return
 	}
 	// Creating an Instance of Customer Interface, so that we can use its underlying methods
@@ -99,13 +85,9 @@ func CreateCustomer(w http.ResponseWriter, r *http.Request) {
 	err = c.InsertIntoDB(cust)
 	if err != nil {
 		log.Println("Database insert failed", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	log.Println("Successfully inserted data")
-
-	// Send back response
 	w.Write([]byte("Created new field."))
 }
 
@@ -122,18 +104,15 @@ func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, customerrors.ErrNotFound) {
 			log.Println("No such record found.")
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("No such record found."))
+			http.Error(w, customerrors.ErrNotFound.Error(), http.StatusNotFound)
 			return
 		} else {
 			log.Println("Error in deleting record", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Error in deleting record."))
+			http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
-
-	w.Write([]byte("Deleted the respective field."))
+	w.Write([]byte("Deleted the requested field."))
 }
 
 func GetCustomer(w http.ResponseWriter, r *http.Request) {
@@ -147,14 +126,11 @@ func GetCustomer(w http.ResponseWriter, r *http.Request) {
 	result, err := db.NewCustomer().GetCustomerInDB(m["uid"])
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			log.Println("No such record found")
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("No record found."))
+			http.Error(w, customerrors.ErrNotFound.Error(), http.StatusNotFound)
 			return
 		} else {
 			log.Println("Cannot find the requested field", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Cannot find the requested field."))
+			http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
@@ -162,56 +138,51 @@ func GetCustomer(w http.ResponseWriter, r *http.Request) {
 	response, err := json.Marshal(result)
 	if err != nil {
 		log.Println("Unable to send", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Write(response)
 }
 
 func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
-	// Create a Variable to store the incoming data
-	// Decode and store the incoming data and check for errors
-	// Store the searching criteria(received through path parameter) in a variable
-	// First fetch the record which needs to be updated
-	// Make updates in fetched record by verifying non empty fields
-	// Pass the updated variable in update customer function and update the DB
-	log.Println("Inside Update Handler")
+
 	var updtCust models.Customer
+
+	// Decode and store the incoming data and check for errors
+
 	err := json.NewDecoder(r.Body).Decode(&updtCust)
 	if err != nil {
 		log.Println("error in reading request", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
+	// Store the searching criteria(received through path parameter) in a variable
 	searchingCriteria := mux.Vars(r)
-	log.Println("Map of path parameters:", searchingCriteria)
-	dbInterface := db.NewCustomer()
 
+	// First fetch the record which needs to be updated
+
+	dbInterface := db.NewCustomer()
 	oldCust, err := dbInterface.GetCustomerInDB(searchingCriteria["uid"])
 	log.Println("Fetched data from DB:", oldCust)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Println("Error in searching for the requested field:", err)
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("No such record found."))
+			http.Error(w, customerrors.ErrNotFound.Error(), http.StatusNotFound)
 			return
 		} else {
 			log.Println("Error in searching: ", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Internal Server error."))
+			http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
 			return
 		}
 
 	}
 
-	// Check fields which are not empty and make changes in record fetched earlier
+	// Validate each field and make updates in fetched record
 
 	if updtCust.Name != oldCust.Name {
 		if updtCust.Name == "" {
 			log.Println("Empty name field.")
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Empty Name field."))
+			http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 			return
 		}
 		oldCust.Name = updtCust.Name
@@ -220,8 +191,7 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 	if updtCust.Age != oldCust.Age {
 		if updtCust.Age <= 0 {
 			log.Println("Invalid value received for age")
-			w.WriteHeader(400)
-			w.Write([]byte("Invalid value for age."))
+			http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 			return
 		}
 		oldCust.Age = updtCust.Age
@@ -234,8 +204,7 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 			log.Println("updated contact", oldCust)
 		} else {
 			log.Println("Invalid contact")
-			w.WriteHeader(400)
-			w.Write([]byte("Invalid value for Contact."))
+			http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 			return
 		}
 	}
@@ -252,29 +221,29 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 			log.Println("updated primary email", oldCust)
 		} else {
 			log.Println("Invalid Primary Email")
-			w.WriteHeader(400)
-			w.Write([]byte("Invalid email."))
+			http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 			return
 		}
 	}
 
-	if updtCust.SecondaryEmail != oldCust.SecondaryEmail {
-		if isValidEmail(updtCust.SecondaryEmail) == true {
-			oldCust.SecondaryEmail = updtCust.SecondaryEmail
-			log.Println("updated secondary email", oldCust)
-		} else {
-			log.Println("Invalid Email")
-			w.WriteHeader(400)
-			w.Write([]byte("Invalid Email."))
-			return
+	if updtCust.SecondaryEmail != "" {
+		if updtCust.SecondaryEmail != oldCust.SecondaryEmail {
+			if isValidEmail(updtCust.SecondaryEmail) == true {
+				oldCust.SecondaryEmail = updtCust.SecondaryEmail
+				log.Println("updated secondary email", oldCust)
+			} else {
+				log.Println("Invalid Email")
+				http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
+				return
+			}
 		}
+
 	}
 
 	if updtCust.Status != oldCust.Status {
 		if updtCust.Status == "" {
 			log.Println("Invalid status")
-			w.WriteHeader(400)
-			w.Write([]byte("Invalid Status."))
+			http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 			return
 		}
 		oldCust.Status = updtCust.Status
@@ -284,8 +253,7 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 	if updtCust.Address.City != oldCust.Address.City {
 		if updtCust.Address.City == "" {
 			log.Println("Invalid city")
-			w.WriteHeader(400)
-			w.Write([]byte("Invalid City."))
+			http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 			return
 		}
 		oldCust.Address.City = updtCust.Address.City
@@ -294,154 +262,70 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 	if updtCust.Address.State != oldCust.Address.State {
 		if updtCust.Address.State == "" {
 			log.Println("Invalid State")
-			w.WriteHeader(400)
-			w.Write([]byte("Invalid Sity."))
+			http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 			return
 		}
 		oldCust.Address.State = updtCust.Address.State
 	}
 
 	// After making all the necessary changes call the UpdateCustomer function
+
 	updatedRecord, err := dbInterface.UpdateCustomerInDB(searchingCriteria["uid"], oldCust)
-	log.Println("Called the update db function:", updatedRecord)
 
 	if err != nil {
 		log.Println("Error in updating requested field", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Failed to update the requested field."))
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Println("Marshalling data")
-
+	
+	// Marshal and send back response
 	finalResponse, err := json.Marshal(updatedRecord)
 	if err != nil {
 		log.Println("Error in marshalling", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Write([]byte(finalResponse))
 }
 
-func SearchCustomers(w http.ResponseWriter, r *http.Request) {
-	log.Println("Inside List Api")
-	var customers []models.Customer
-	// A searching criteria[name,age,status,city,state]
-	name := r.URL.Query().Get("name")
-	age := r.URL.Query().Get("age")
-	status := r.URL.Query().Get("status")
-	city := r.URL.Query().Get("city")
-	state := r.URL.Query().Get("state")
+func ListCustomer(w http.ResponseWriter, r *http.Request) {
+	var listPara models.Listparameters
+	// Unmarshal incoming data
+	err := json.NewDecoder(r.Body).Decode(&listPara)
 
-	if name == "" && age == "" && status == "" && city == "" && state == "" {
-		log.Println("No query parameters passed")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Empty query parameters."))
+	// Convert necessary fields to lowercase for proper validation
+	order := strings.ToLower(listPara.OrderBy)
+	sort := strings.ToLower(listPara.SortIn)
+	listPara.SortIn = sort
+	listPara.OrderBy = order
+
+	if listPara.PageSize == 0 {
+		listPara.PageSize = 3
+	}
+
+	// Validate the inputs received
+	validation := models.ValidateListParam(listPara)
+	if validation == false {
+		log.Println("Validation Failed")
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 		return
 	}
 
-	log.Println("name:", name, "age:", age, "state:", state, "city:", city, "status:", status)
-	log.Println("Extracted query parameters")
-
-	// Check on which criteria do we have to search
-	if name != "" {
-		log.Println("Verified name", name)
-		err := utils.Connection.NewSelect().Model(&customers).Where("name=?", name).Scan(context.Background())
-		log.Println("Called DB")
-		if err != nil {
-			log.Println("Error in searching requested fields", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		if len(customers) == 0 {
-			log.Println("No such records found")
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("No such record found."))
-			return
-		}
-	}
-	ageInInt, err := strconv.Atoi(age)
+	arr := models.GetListColumns()
+	input := fmt.Sprintf("order by Case when %v='%v' then 0 else 1 End , name %v offset %v  limit %v ", listPara.OrderBy, listPara.Input, listPara.SortIn, listPara.PageNumber, listPara.PageSize)
+	// Call the List Customer funciton
+	result, err := db.NewCustomer().ListCustomers(arr, input)
 	if err != nil {
-		log.Println("Error in converting age to int:", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("Cannot find the requested field", err)
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusInternalServerError)
 		return
 	}
-	if ageInInt != 0 {
-		if ageInInt < 0 {
-			log.Println("Invalid Age")
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Invalid Age"))
-			return
-		}
-		log.Println("Verified age")
-		err := utils.Connection.NewSelect().Model(&customers).Where("age=?", ageInInt).Scan(context.Background())
-		log.Println(err)
-		if err != nil {
-			log.Println("Error in searching requested fields", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		if len(customers) == 0 {
-			log.Println("No such records found")
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("No such record found."))
-			return
-		}
-	}
-
-	if status != "" {
-		log.Println("Verified status")
-		err := utils.Connection.NewSelect().Model(&customers).Where("status=?", status).Scan(context.Background())
-		if err != nil {
-			log.Println("Error in searching requested fields", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		if len(customers) == 0 {
-			log.Println("No such records found")
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("No such record found."))
-			return
-		}
-	}
-
-	if city != "" {
-		log.Println("Verified city")
-		err := utils.Connection.NewSelect().Model(&customers).Where("address->>'city'=?", city).Scan(context.Background())
-		if err != nil {
-			log.Println("Error in searching requested fields", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		if len(customers) == 0 {
-			log.Println("No such records found")
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("No such record found."))
-			return
-		}
-	}
-
-	if state != "" {
-		log.Println("Verified state")
-		err := utils.Connection.NewSelect().Model(&customers).Where("address->>'state'=?", state).Scan(context.Background())
-		if err != nil {
-			log.Println("Error in searching requested fields", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		if len(customers) == 0 {
-			log.Println("No such records found")
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("No such record found."))
-			return
-		}
-	}
-	log.Println("Before marshalling", customers)
-	response, err := json.Marshal(customers)
+	// Send back response
+	response, err := json.Marshal(result)
 	if err != nil {
-		log.Println("Error in marshaling", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("Unable to send", err)
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Write(response)
-	log.Println("End of list api")
 }

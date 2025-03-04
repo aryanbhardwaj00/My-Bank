@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,4 +40,37 @@ type Account struct {
 	CreatedAt     *time.Time `json:"created_at"`
 	UpdatedAt     *time.Time `json:"updated_at"`
 	Tags          []string   `json:"tags"`
+}
+
+func GetListColumns() []string {
+	return []string{"name", "age", "uid"}
+}
+
+type Listparameters struct {
+	PageNumber int
+	PageSize   int
+	Input      string
+	OrderBy    string
+	SortIn     string
+}
+
+func ValidateListParam(lst Listparameters) bool {
+	log.Println("Inside Validate List Para fn")
+	log.Println("Input Received:", lst)
+	switch {
+	case lst.PageNumber < 0, lst.PageSize <= 0:
+		log.Println("Page number or page size less than 0:", lst.PageNumber)
+		return false
+	case lst.SortIn != "asc" && lst.SortIn != "desc":
+		log.Println("Empty or invalid sort by.")
+		return false
+	case lst.OrderBy != "name" && lst.OrderBy != "updated_at" && lst.OrderBy != "created_at":
+		log.Println("Empty or invalid order by.")
+		return false
+	case lst.Input == "":
+		log.Println("Empty Input.")
+		return false
+	default:
+		return true
+	}
 }

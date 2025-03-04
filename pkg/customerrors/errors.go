@@ -1,6 +1,8 @@
 package customerrors
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	ErrNotFound        = errors.New("Resource Not Found")

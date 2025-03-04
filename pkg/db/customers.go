@@ -2,7 +2,9 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/Bank/pkg/customerrors"
 	"github.com/Bank/pkg/models"
@@ -18,6 +20,7 @@ type Customer interface {
 	UpdateCustomerInDB(string, models.Customer) (models.Customer, error)
 	DeleteCustomerInDB(string) error
 	GetCustomerInDB(string) (models.Customer, error)
+	ListCustomers([]string, string) ([]models.Customer, error)
 }
 
 func NewCustomer() Customer {
@@ -57,6 +60,8 @@ func (c *customer) GetCustomerInDB(input string) (models.Customer, error) {
 	log.Println("Inside Search customer in DB, Value of Search Criteria", input)
 
 	err := utils.Connection.NewSelect().Model(&cst).Where("uid=?", input).Scan(context.Background())
+
+	log.Println("After DBcall:", cst)
 	if err != nil {
 		log.Println("Error in searching field", err)
 		return cst, err
@@ -86,4 +91,19 @@ func (c *customer) UpdateCustomerInDB(input string, updtCust models.Customer) (m
 	log.Println("returning from update db function:")
 
 	return updtCust, nil
+}
+
+func (c *customer) ListCustomers(arr []string, inp string) ([]models.Customer, error) {
+	log.Println("Inside List customer in DB")
+	rawQuery := fmt.Sprintf("select %v from customer %v ", strings.Join(arr, ","), inp)
+	log.Println("RawQuery:", rawQuery)
+	var cst []models.Customer
+	// log.Println("Inside List customer in DB, Value of Search Criteria", input)
+
+	_, err := utils.Connection.NewRaw(rawQuery).Exec(context.Background(), &cst)
+	if err != nil {
+		log.Println("Error in searching field", err)
+		return cst, err
+	}
+	return cst, nil
 }
