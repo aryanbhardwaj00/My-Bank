@@ -277,7 +277,7 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Marshal and send back response
 	finalResponse, err := json.Marshal(updatedRecord)
 	if err != nil {
@@ -310,14 +310,26 @@ func ListCustomer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 		return
 	}
-
 	arr := models.GetListColumns()
-	input := fmt.Sprintf("order by Case when %v='%v' then 0 else 1 End , name %v offset %v  limit %v ", listPara.OrderBy, listPara.Input, listPara.SortIn, listPara.PageNumber, listPara.PageSize)
+	input := ""
+	switch {
+	case listPara.OrderBy == "name":
+		input = fmt.Sprintf("order by Case when %v='%v' then 0 else 1 End , %v offset %v  limit %v ", listPara.OrderBy, listPara.Input, listPara.SortIn, listPara.PageNumber, listPara.PageSize)
+	case listPara.OrderBy == "created_at":
+		input = fmt.Sprintf("order by %v %v offset %v  limit %v ", listPara.OrderBy, listPara.SortIn, listPara.PageNumber, listPara.PageSize)
+	case listPara.OrderBy == "updated_at":
+		input = fmt.Sprintf("order by %v %v offset %v  limit %v ", listPara.OrderBy, listPara.SortIn, listPara.PageNumber, listPara.PageSize)
+	}
 	// Call the List Customer funciton
 	result, err := db.NewCustomer().ListCustomers(arr, input)
 	if err != nil {
 		log.Println("Cannot find the requested field", err)
-		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusInternalServerError)
+		http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(result) == 0 {
+		log.Println("No records fetched.")
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 		return
 	}
 	// Send back response
