@@ -245,6 +245,12 @@ var deleteTest = []dltTestcase{
 		expectedStatusCode: http.StatusNotFound,
 		expectedError:      apperrors.ErrNotFound.Error(),
 	},
+	{
+		name:               "Invalid UID",
+		inp:                uuid.MustParse("30396165-6263-3965-2d34"),
+		expectedStatusCode: http.StatusBadRequest,
+		expectedError:      apperrors.ErrInvalidInput.Error(),
+	},
 }
 
 func TestDel(t *testing.T) {

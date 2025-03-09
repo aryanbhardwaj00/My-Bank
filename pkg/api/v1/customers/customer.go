@@ -95,11 +95,17 @@ func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 	log.Println("Inside Delete function in handler")
 	// Extract the path parameter[UID]
 	mapOfPathParameters := mux.Vars(r)
+	_, err := uuid.Parse(mapOfPathParameters["uid"])
+	if err != nil {
+		log.Println("Invalid UID received.")
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
+		return
+	}
 	log.Println("Map of path parameter:", mapOfPathParameters)
 
 	c := db.NewCustomer()
 
-	err := c.DeleteCustomerInDB(mapOfPathParameters["uid"])
+	err = c.DeleteCustomerInDB(mapOfPathParameters["uid"])
 
 	if err != nil {
 		if errors.Is(err, customerrors.ErrNotFound) {
@@ -121,9 +127,15 @@ func GetCustomer(w http.ResponseWriter, r *http.Request) {
 	// Return if the requested field not found
 	// If found , send it as response
 	log.Println("Inside Search handler")
-	m := mux.Vars(r)
-	log.Println("Path parameters:", m)
-	result, err := db.NewCustomer().GetCustomerInDB(m["uid"])
+	mapOfPathPara := mux.Vars(r)
+	_, err := uuid.Parse(mapOfPathPara["uid"])
+	if err != nil {
+		log.Println("Invalid UID received.")
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
+		return
+	}
+	log.Println("Path parameters:", mapOfPathPara)
+	result, err := db.NewCustomer().GetCustomerInDB(mapOfPathPara["uid"])
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, customerrors.ErrNotFound.Error(), http.StatusNotFound)
@@ -158,6 +170,12 @@ func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 	}
 	// Store the searching criteria(received through path parameter) in a variable
 	searchingCriteria := mux.Vars(r)
+	_, err = uuid.Parse(searchingCriteria["uid"])
+	if err != nil {
+		log.Println("Invalid UID received.")
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// First fetch the record which needs to be updated
 
