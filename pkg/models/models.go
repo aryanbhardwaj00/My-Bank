@@ -67,10 +67,15 @@ func ValidateListParam(lst Listparameters) bool {
 	case lst.OrderBy != "name" && lst.OrderBy != "updated_at" && lst.OrderBy != "created_at":
 		log.Println("Empty or invalid order by.")
 		return false
-	case lst.OrderBy=="name" && lst.Input == "":
+	case lst.OrderBy == "name" && lst.Input == "":
 		log.Println("Empty Input.")
 		return false
 	default:
 		return true
 	}
+}
+
+type TransferMoney struct {
+	Amount     float32
+	ReceiverID string
 }

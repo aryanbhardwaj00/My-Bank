@@ -10,4 +10,5 @@ var (
 	ErrConnection      = errors.New("Connection Failed")
 	ErrInternalServer  = errors.New("Internal Server Error")
 	ErrResourceDeleted = errors.New("Requested resource Deleted")
+	ErrNoRows          = errors.New("No Rows Affected")
 )

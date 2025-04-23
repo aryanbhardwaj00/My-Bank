@@ -9,6 +9,7 @@ import (
 	"github.com/Bank/pkg/utils"
 )
 
+// Remove DB everywhere
 type DB struct {
 	db string
 }
@@ -69,10 +70,16 @@ func (d *DB) SearchAccountInDB(input string) (models.Account, error) {
 }
 
 func (d *DB) UpdateAccount(input string, account models.Account) (models.Account, error) {
-	err := utils.Connection.NewUpdate().Model(&account).Where("uid=?", input).Scan(context.Background())
+	responseDb, err := utils.Connection.NewUpdate().Model(&account).Where("customer_id=?", input).Exec(context.Background())
 	if err != nil {
 		log.Println("Error in updating record.", err)
 		return models.Account{}, err
+	}
+	log.Println("Verifying rows affected")
+	rowsAffected, err := responseDb.RowsAffected()
+	if rowsAffected == 0 || err != nil {
+		log.Println("No such record found", err)
+		return models.Account{}, customerrors.ErrNotFound
 	}
 	log.Println("Succesfully updated record.")
 	return account, nil

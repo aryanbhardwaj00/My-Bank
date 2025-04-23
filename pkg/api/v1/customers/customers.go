@@ -149,7 +149,7 @@ func GetCustomer(w http.ResponseWriter, r *http.Request) {
 	log.Println("marshalling data")
 	response, err := json.Marshal(result)
 	if err != nil {
-		log.Println("Unable to send", err)
+		log.Println("Unable to marshal response.", err)
 		http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -6,6 +6,8 @@ import (
 
 	accountv1handler "github.com/Bank/pkg/api/v1/accounts"
 	customerv1handler "github.com/Bank/pkg/api/v1/customers"
+	"github.com/Bank/pkg/db"
+	"github.com/Bank/pkg/services/moneyhandler"
 	"github.com/Bank/pkg/utils"
 	"github.com/gorilla/mux"
 )
@@ -34,10 +36,16 @@ func main() {
 	newRouter.HandleFunc("/api/v1/customers", customerv1handler.ListCustomer).Methods("POST")
 
 	// Path for Account related requests
-	newRouter.HandleFunc("/api/v1/accounts", accountv1handler.CreateAccount).Methods("POST")
-	newRouter.HandleFunc("/api/v1/accounts/{uid}", accountv1handler.SearchAccount).Methods("GET")
-	newRouter.HandleFunc("/api/v1/accounts/{uid}", accountv1handler.DeleteAcount).Methods("DELETE")
-	newRouter.HandleFunc("/api/v1/accounts/{uid}", accountv1handler.UpdateAccount).Methods("PATCH")
+	db := db.NewAccount()
+	a := accountv1handler.NewAccount(db)
+	newRouter.HandleFunc("/api/v1/accounts", a.CreateAccount).Methods("POST")
+	newRouter.HandleFunc("/api/v1/accounts/{uid}", a.GetAccount).Methods("GET")
+	newRouter.HandleFunc("/api/v1/accounts/{uid}", a.DeleteAccount).Methods("DELETE")
+	newRouter.HandleFunc("/api/v1/accounts/{uid}", a.UpdateAccount).Methods("PATCH")
 
+	//Path for Transaction related requests
+	newRouter.HandleFunc("/services/transaction1/{uid}", moneyhandler.AddDeposit).Methods("POST")
+	newRouter.HandleFunc("/services/transaction2/{uid}", moneyhandler.WithdrawMoney).Methods("POST")
+	newRouter.HandleFunc("/services/transaction3/{uid}", moneyhandler.TransferMoney).Methods("POST")
 	http.ListenAndServe(":8080", newRouter)
 }

@@ -14,7 +14,22 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func CreateAccount(w http.ResponseWriter, r *http.Request) {
+type Accounts interface {
+	CreateAccount(w http.ResponseWriter, r *http.Request)
+	UpdateAccount(w http.ResponseWriter, r *http.Request)
+	DeleteAccount(w http.ResponseWriter, r *http.Request)
+	GetAccount(w http.ResponseWriter, r *http.Request)
+}
+
+type accounts struct {
+	db db.Account
+}
+
+func NewAccount(ac db.Account) Accounts {
+	return &accounts{}
+}
+
+func (a *accounts) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	var acc models.Account
 
 	// Read Incoming Request , check for error (if any)
@@ -31,57 +46,64 @@ func CreateAccount(w http.ResponseWriter, r *http.Request) {
 
 	// Check if any essential field is empty
 
+	if acc.Balance < 0 {
+		log.Println("Invalid Balance")
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
+		return
+	}
 	if acc.Type == "" {
 		log.Println("Account type not defined.")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Account type not defined."))
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// INSERT INTO DB & CHECK FOR ANY ERROR
 
-	dbInterface := db.NewAccount()
-	err = dbInterface.InsertAccountInDB(acc)
+	err = a.db.InsertAccountInDB(acc)
+	// a.db.
 	if err != nil {
 		log.Println("Data Insertion Failed", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Data Insertion Failed."))
+		http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Write([]byte("Succesfully created new Account."))
 }
 
-func DeleteAcount(w http.ResponseWriter, r *http.Request) {
+func (a *accounts) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	// Store the deleting criteria received through path parameter
 	mapOfPathPara := mux.Vars(r)
 
 	log.Println("Value of path parameter:", mapOfPathPara)
+	_, err := uuid.Parse(mapOfPathPara["uid"])
+	if err != nil {
+		log.Println("Invalid UID received.")
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// Create dbInterface variable of db interface so that we can access underlying methods
 	dbInterface := db.NewAccount()
 
 	// Call the Delete Account method and pass the parameter & check errors,if any
 
-	err := dbInterface.DeleteAcountInDB(mapOfPathPara["uid"])
+	err = dbInterface.DeleteAcountInDB(mapOfPathPara["uid"])
 
 	if err != nil {
 		if errors.Is(err, customerrors.ErrNotFound) {
 			log.Println("Error in deleting record", err)
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("No such record found."))
+			http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 			return
 		} else {
 			log.Println("Error in deleting record", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Failed to delete record."))
+			http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
 	w.Write([]byte("Deleted Account Successfully"))
 }
 
-func SearchAccount(w http.ResponseWriter, r *http.Request) {
+func (a *accounts) GetAccount(w http.ResponseWriter, r *http.Request) {
 	// Store the searching criteria received through path parameter
 	mapOfPathPara := mux.Vars(r)
 
@@ -94,14 +116,12 @@ func SearchAccount(w http.ResponseWriter, r *http.Request) {
 	response, err := dbInterface.SearchAccountInDB(mapOfPathPara["uid"])
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			log.Println("Error in searching field", err)
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("No such record found."))
+			log.Println("Invalid searching criteria.", err)
+			http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 			return
 		} else {
 			log.Println("Error in searching field", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Failed to search the requested record."))
+			http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -110,20 +130,19 @@ func SearchAccount(w http.ResponseWriter, r *http.Request) {
 	finalResponse, err := json.Marshal(response)
 	if err != nil {
 		log.Println("Error in marshalling data", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Write(finalResponse)
 }
 
-func UpdateAccount(w http.ResponseWriter, r *http.Request) {
+func (a *accounts) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 	var newAcc models.Account
 	err := json.NewDecoder(r.Body).Decode(&newAcc)
 	if err != nil {
 		log.Println("Error in reading from request.")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Error in reading from request."))
+		http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -135,25 +154,13 @@ func UpdateAccount(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Println("No such record found.")
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("No record found."))
+			http.Error(w, customerrors.ErrInvalidInput.Error(), http.StatusBadRequest)
 			return
 		} else {
 			log.Println("Error in updating record")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Failed to update the requested field."))
+			http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
 			return
 		}
-	}
-
-	if newAcc.Balance != 0 {
-		if newAcc.Balance < 0 {
-			log.Println("Invalid balance")
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Invalid Balance."))
-			return
-		}
-		oldAccount.Balance = newAcc.Balance
 	}
 
 	if newAcc.Type != "" {
@@ -167,16 +174,15 @@ func UpdateAccount(w http.ResponseWriter, r *http.Request) {
 	updatedAcc, err := db.UpdateAccount(searchingCriteria["uid"], oldAccount)
 	if err != nil {
 		log.Println("Failed to update the requested field:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Update failed."))
+		http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	response, err := json.Marshal(updatedAcc)
 	if err != nil {
 		log.Println("Failed to marshal data:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Failed to marshal data."))
+		http.Error(w, customerrors.ErrInternalServer.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	w.Write(response)
