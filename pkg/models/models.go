@@ -19,7 +19,7 @@ type Customer struct {
 	CreatedAt       *time.Time        `json:"created_at" bun:"created_at"`
 	UpdatedAt       *time.Time        `json:"updated_at" bun:"updated_at"`
 	Status          string            `json:"status" bun:"status"`
-	AccountID       int               `json:"accountid" bun:"account_id"`
+	AccountID       uuid.UUID         `json:"accountid" bun:"account_id"`
 	Address         *Address          `json:"address" bun:"address"`
 	ResourceVersion int64             `json:"resourceversion" bun:"resource_version"`
 	Tags            map[string]string `json:"tags" bun:"tags"`
@@ -33,13 +33,13 @@ type Address struct {
 
 type Account struct {
 	bun.BaseModel `bun:"table:accounts,alias:acc"`
-	CustomerID    uuid.UUID  `json:"customer_id"`
-	Type          string     `json:"type"`
-	Balance       float32    `json:"balance"`
-	Status        string     `json:"status"`
-	CreatedAt     *time.Time `json:"created_at"`
-	UpdatedAt     *time.Time `json:"updated_at"`
-	Tags          []string   `json:"tags"`
+	CustomerID    uuid.UUID  `json:"customer_id" bun:"customer_id"`
+	Type          string     `json:"type" bun:"type"`
+	Balance       float32    `json:"balance" bun:"balance"`
+	Status        string     `json:"status" bun:"status"`
+	CreatedAt     *time.Time `json:"created_at" bun:"created_at"`
+	UpdatedAt     *time.Time `json:"updated_at" bun:"updated_at"`
+	Tags          []string   `json:"tags" bun:"tags"`
 }
 
 func GetListColumns() []string {
@@ -47,11 +47,11 @@ func GetListColumns() []string {
 }
 
 type Listparameters struct {
-	PageNumber int
-	PageSize   int
-	Input      string
-	OrderBy    string
-	SortIn     string
+	PageNumber int    `json:"pagenumber"`
+	PageSize   int    `json:"pagesize"`
+	Input      string `json:"input"`
+	OrderBy    string `json:"orderby"`
+	SortIn     string `json:"sortin"`
 }
 
 func ValidateListParam(lst Listparameters) bool {
