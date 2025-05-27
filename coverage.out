@@ -1,0 +1,4 @@
+mode: set
+github.com/Bank/main.go:13.13,16.16 2 0
+github.com/Bank/main.go:16.16,18.3 1 0
+github.com/Bank/main.go:19.2,41.41 11 0
