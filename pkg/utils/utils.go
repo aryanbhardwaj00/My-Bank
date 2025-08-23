@@ -15,7 +15,7 @@ var Connection *bun.DB
 
 func ConnectToDB() error {
 	var err error
-	db, err := sql.Open("postgres", "user=postgres dbname=my-bank password=postgres port=5432 host=localhost")
+	db, err := sql.Open("postgres", "user=admin dbname=mydb password=qwerty port=5432 host=postgres sslmode=disable")
 	if err != nil {
 		fmt.Println("Error while connecting to DB", err)
 		return err
